@@ -8,6 +8,16 @@ from dotenv import load_dotenv
 # Load .env variables.
 load_dotenv()
 
+# Authenticate with Twitter.
+auth = tweepy.OAuthHandler(os.environ.get("TWITTER_CONSUMER_KEY"), os.environ.get("TWITTER_CONSUMER_SECRET"))
+auth.set_access_token(os.environ.get("TWITTER_ACCESS_TOKEN"), os.environ.get("TWITTER_ACCESS_TOKEN_SECRET"))
+
+# Create Tweepy API object
+tweepy_api = tweepy.API(auth)
+
+# Create a tweet
+tweepy_api.update_status("Hello Tweepy")
+
 # Initialize OpenAI.
 client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),

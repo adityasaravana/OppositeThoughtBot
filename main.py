@@ -60,22 +60,8 @@ def check_tweet(tweet):
             return True
     return False
 
-def fetch_tweets(username):
-    user_id = tweepy_api.get_user(username=username).data.id
-    responses = tweepy.Paginator(tweepy_api.get_users_tweets, user_id, max_results=100, limit=100)
-    tweets_list = [["link", "username" "tweet"]]
+def parse_tweet(id):
     
-    counter = 0
-    for response in responses:
-        counter += 1
-        print(f"==> processing {counter * 100} to {(counter + 1) * 100} of {username}'s tweets")
-        try:
-            for tweet in response.data:  # see any individual tweet by id at: twitter.com/anyuser/status/TWEET_ID_HERE
-                tweets_list.append([f"https://twitter.com/anyuser/status/{tweet.id}", username, tweet.text])
-        except Exception as e:
-            print(e)
-
-    print("Done!")
 
 
 flipped_tweet = flip_tweet("")

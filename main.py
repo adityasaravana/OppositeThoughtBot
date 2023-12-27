@@ -25,10 +25,6 @@ openai_api = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),
 )
 
-# Function to convert strings to booleans.
-
-  
-
 # Function to flip tweets.
 def flip_tweet(tweet):
     chat_completion = openai_api.chat.completions.create(
@@ -63,6 +59,24 @@ def check_tweet(tweet):
             categories.violence or categories.violence_graphic):
             return True
     return False
+
+def fetch_tweets(username):
+    user_id = tweepy_api.get_user(username=username).data.id
+    responses = tweepy.Paginator(tweepy_api.get_users_tweets, user_id, max_results=100, limit=100)
+    tweets_list = [["link", "username" "tweet"]]
+    
+    counter = 0
+    for response in responses:
+        counter += 1
+        print(f"==> processing {counter * 100} to {(counter + 1) * 100} of {username}'s tweets")
+        try:
+            for tweet in response.data:  # see any individual tweet by id at: twitter.com/anyuser/status/TWEET_ID_HERE
+                tweets_list.append([f"https://twitter.com/anyuser/status/{tweet.id}", username, tweet.text])
+        except Exception as e:
+            print(e)
+
+    print("Done!")
+
 
 flipped_tweet = flip_tweet("")
 print(flipped_tweet)

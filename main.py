@@ -1,69 +1,79 @@
 import tweepy
-
-from openai import OpenAI
-
+import openai
 import os
+import time
+import schedule
 from dotenv import load_dotenv
 
-# Load .env variables.
+# Load environment variables from .env file
 load_dotenv()
 
-# Create Tweepy API object.
-tweepy_api = tweepy.Client(
-    bearer_token=os.environ.get("TWITTER_BEARER_TOKEN"),
-    access_token=os.environ.get("TWITTER_ACCESS_TOKEN"),
-    access_token_secret=os.environ.get("TWITTER_ACCESS_TOKEN_SECRET"),
-    consumer_key=os.environ.get("TWITTER_CONSUMER_KEY"),
-    consumer_secret=os.environ.get("TWITTER_CONSUMER_SECRET")
-)
+# Twitter API credentials from environment variables
+consumer_key = os.getenv("TWITTER_CONSUMER_KEY")
+consumer_secret = os.getenv("TWITTER_CONSUMER_SECRET")
+access_token = os.getenv("TWITTER_ACCESS_TOKEN")
+access_token_secret = os.getenv("TWITTER_ACCESS_TOKEN_SECRET")
 
-# Create a tweet
-# tweepy_api.create_tweet(text="Hello, world!")
+# Thought leader's Twitter handle
+thought_leader_handle = "berkson0"
 
-# Initialize OpenAI.
-openai_api = OpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY"),
-)
+# OpenAI API key from environment variables
+openai.api_key = os.getenv("OPENAI_API_KEY")
 
-# Function to flip tweets.
-def flip_tweet(tweet):
-    chat_completion = openai_api.chat.completions.create(
-        messages=[
-            {
-                "role": "system",
-                "content": "You are a Twitter bot that tweets the opposite of what a Twitter thought leader influencer says and is therefore just as insightful.",
-            },
-            {
-                "role": "user",
-                "content": f'Tweet: {tweet}',
-            }
-        ],
-        model="gpt-3.5-turbo-1106",
+# Authenticate with Twitter using OAuth1UserHandler
+try:
+    auth = tweepy.OAuth1UserHandler(
+        consumer_key, consumer_secret, access_token, access_token_secret
     )
-    response = chat_completion.choices[0].message.content
-    return response
+    tweepy_api = tweepy.API(auth)
+except tweepy.TweepyException as e:
+    print(f"Error: Twitter API authentication failed - {e}")
+    exit(1)
 
-# Function to make sure the bot doesn't accidentally say something horrible.
-def check_tweet(tweet):
-    response = openai_api.moderations.create(
-        input=tweet
+def get_user_id(username):
+    try:
+        user = tweepy_api.get_user(screen_name=username)
+        return user.id
+    except tweepy.TweepyException as e:
+        print(f"Error: Unable to fetch user ID - {e}")
+        exit(1)
+
+def reverse_thoughts(tweet):
+    # Use OpenAI API to reverse the thoughts in the tweet
+    prompt = f"Reverse the following tweet to express the opposite sentiment:\n\n{tweet}"
+    response = openai.Completion.create(
+        engine="text-davinci-003",
+        prompt=prompt,
+        max_tokens=60
     )
-    
-    for moderation in response.results:
-        categories = moderation.categories
-        # Check if any category other than harassment is true
-        if (categories.harassment_threatening or categories.hate or 
-            categories.hate_threatening or categories.self_harm or 
-            categories.self_harm_instructions or categories.self_harm_intent or 
-            categories.sexual or categories.sexual_minors or 
-            categories.violence or categories.violence_graphic):
-            return True
-    return False
+    reversed_tweet = response.choices[0].text.strip()
+    return reversed_tweet
 
-def parse_tweet(id):
-    
+def get_latest_tweets(user_id):
+    print("Fetching tweets is only available with paid API access.")
+    return []
 
+def post_tweet(status):
+    try:
+        # Use tweepy.API to post a new tweet
+        tweepy_api.update_status(status)
+    except tweepy.TweepyException as e:
+        print(f"Error: Unable to post tweet - {e}")
 
-flipped_tweet = flip_tweet("")
-print(flipped_tweet)
-print(check_tweet(""))
+def process_tweets(user_id):
+    tweets = get_latest_tweets(user_id)
+    for tweet in tweets:
+        original_tweet = tweet.text
+        reversed_tweet = reverse_thoughts(original_tweet)
+        post_tweet(reversed_tweet)
+
+def main():
+    user_id = get_user_id(thought_leader_handle)
+    schedule.every().day.at("10:00").do(process_tweets, user_id)  # Schedule the task to run once a day at 10:00 AM
+
+    while True:
+        schedule.run_pending()
+        time.sleep(1)
+
+if __name__ == "__main__":
+    main()
